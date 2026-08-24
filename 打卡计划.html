@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>公考打卡计划 · 2026 国考</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:"Microsoft YaHei","PingFang SC",sans-serif; background:#f0f4f8; color:#2d3748; max-width:640px; margin:0 auto; padding:16px 14px 30px; }
+h1 { font-size:21px; color:#1a202c; text-align:center; }
+.sub { font-size:13px; color:#718096; text-align:center; margin-top:4px; }
+.stats { display:flex; gap:8px; margin:14px 0 10px; }
+.stat { flex:1; background:#fff; border-radius:12px; padding:11px 4px; text-align:center; box-shadow:0 1px 3px rgba(0,0,0,.06); }
+.stat .num { font-size:19px; font-weight:700; color:#2b6cb0; }
+.stat .lbl { font-size:11px; color:#718096; margin-top:2px; }
+.stage { background:#fff; border-radius:12px; padding:10px 14px; margin-bottom:8px; font-size:13px; color:#4a5568; box-shadow:0 1px 3px rgba(0,0,0,.06); display:flex; justify-content:space-between; align-items:center; }
+.stage b { color:#2b6cb0; }
+.stage .tag { font-size:12px; color:#718096; }
+.mile { text-align:center; font-size:13px; color:#48bb78; font-weight:600; margin:8px 0 10px; min-height:18px; }
+.weeknav { display:flex; align-items:center; justify-content:space-between; background:#fff; border-radius:12px; padding:7px 10px; margin-bottom:10px; box-shadow:0 1px 3px rgba(0,0,0,.06); }
+.weeknav button { border:none; background:#edf2f7; width:30px; height:30px; border-radius:8px; font-size:17px; cursor:pointer; color:#4a5568; line-height:1; }
+.weeknav button:disabled { opacity:.3; cursor:default; }
+.weeknav span { font-size:13px; font-weight:600; }
+.row { display:flex; align-items:center; background:#fff; border-radius:12px; padding:11px 12px; margin-bottom:7px; box-shadow:0 1px 3px rgba(0,0,0,.06); gap:10px; }
+.row .date { width:86px; flex-shrink:0; font-size:11px; color:#a0aec0; }
+.row .date b { display:block; font-size:14px; color:#1a202c; }
+.row .task { flex:1; font-size:13px; color:#4a5568; line-height:1.45; }
+.row .task .mod { font-weight:600; color:#2b6cb0; }
+.row .tip { display:block; font-size:11px; color:#a0aec0; margin-top:2px; }
+.btn { width:38px; height:38px; border-radius:50%; border:2px solid #cbd5e0; background:#fff; cursor:pointer; flex-shrink:0; font-size:17px; color:transparent; transition:.15s; }
+.btn:disabled { opacity:.25; cursor:default; }
+.row.done { background:#f0faf4; }
+.row.done .btn { background:#48bb78; border-color:#48bb78; color:#fff; }
+.row.done .task { color:#a0aec0; text-decoration:line-through; }
+.row.done .date b { color:#a0aec0; }
+.row.today { outline:2px solid #bee3f8; outline-offset:-2px; }
+.row.prep { background:#f7fafc; opacity:.6; }
+.row.prep .mod { color:#a0aec0; }
+.row.free .mod { color:#718096; }
+.row.exam { background:#fffaf0; }
+.row.exam .mod { color:#dd6b20; }
+.card { background:#fff; border-radius:12px; padding:12px 14px; margin-bottom:10px; box-shadow:0 1px 3px rgba(0,0,0,.06); }
+.cardtitle { font-size:14px; font-weight:700; color:#1a202c; margin-bottom:8px; }
+.tag2 { font-size:11px; color:#a0aec0; font-weight:400; margin-left:4px; }
+.noteform { font-size:14px; color:#4a5568; line-height:1.9; }
+.inp { width:52px; border:1px solid #cbd5e0; border-radius:8px; padding:5px 4px; font-size:14px; text-align:center; margin:0 2px; }
+.inp:focus { outline:2px solid #bee3f8; border-color:#2b6cb0; }
+.savebtn { background:#2b6cb0; color:#fff; border:none; border-radius:8px; padding:6px 14px; font-size:13px; cursor:pointer; margin-left:6px; }
+.savebtn:active { transform:scale(.96); }
+.saved { font-size:13px; color:#48bb78; font-weight:600; margin-top:4px; }
+.cmp { font-size:12px; color:#718096; font-weight:400; margin-top:5px; line-height:1.6; }
+.good { color:#48bb78; } .bad { color:#e53e3e; } .flat { color:#a0aec0; }
+.chip { display:inline-block; padding:1px 7px; border-radius:10px; font-size:11px; margin-left:4px; background:#f7fafc; }
+.tgroup { font-size:13px; font-weight:700; color:#2d3748; margin:10px 0 2px; }
+.trow { display:flex; align-items:center; gap:6px; padding:6px 0; border-bottom:1px dashed #edf2f7; font-size:13px; color:#4a5568; flex-wrap:wrap; }
+.trow:last-child { border-bottom:none; }
+.trow .d { width:76px; flex-shrink:0; font-size:11px; color:#a0aec0; }
+.trow .nums { flex:1; min-width:120px; }
+.empty { font-size:12px; color:#a0aec0; }
+a { color:#2b6cb0; }
+.lbl { font-size:12px; color:#718096; margin:8px 0 4px; }
+.ta { width:100%; min-height:60px; border:1px solid #cbd5e0; border-radius:8px; padding:8px; font-size:13px; font-family:inherit; resize:vertical; box-sizing:border-box; color:#2d3748; }
+.ta:focus { outline:2px solid #bee3f8; border-color:#2b6cb0; }
+details summary { cursor:pointer; font-size:13px; font-weight:700; color:#2b6cb0; margin-bottom:4px; }
+.steps { font-size:12.5px; color:#4a5568; line-height:1.9; background:#f7fafc; border-radius:10px; padding:8px 12px; margin-bottom:6px; }
+.steps b { color:#2b6cb0; }
+.revitem { background:#f7fafc; border-radius:10px; padding:8px 10px; margin-top:8px; }
+.revmeta { font-size:11px; color:#a0aec0; margin-bottom:3px; }
+.delbtn { float:right; cursor:pointer; color:#a0aec0; padding:0 4px; font-size:12px; }
+.delbtn:hover { color:#e53e3e; }
+.revq { font-size:12.5px; color:#2d3748; white-space:pre-wrap; word-break:break-all; background:#fff; border:1px solid #edf2f7; border-radius:8px; padding:6px 8px; margin-bottom:5px; }
+.revnote { font-size:12.5px; color:#4a5568; white-space:pre-wrap; word-break:break-all; line-height:1.7; }
+.typlbl { font-size:11px; color:#2b6cb0; background:#ebf8ff; border-radius:8px; padding:1px 6px; margin-left:4px; }
+.chiprow { display:flex; flex-wrap:wrap; gap:6px; }
+.typchip, .fchip { border:1px solid #cbd5e0; background:#fff; border-radius:16px; padding:4px 10px; font-size:12px; cursor:pointer; color:#4a5568; }
+.fchip { padding:3px 9px; font-size:11.5px; }
+.typchip.on, .fchip.on { background:#2b6cb0; border-color:#2b6cb0; color:#fff; }
+.wmline { font-size:12.5px; color:#4a5568; padding:4px 0; }
+.wmline b { color:#2b6cb0; }
+.wmrow { display:flex; gap:8px; font-size:12.5px; padding:5px 0; border-bottom:1px dashed #edf2f7; }
+.wmrow .g { width:44px; font-weight:600; color:#2b6cb0; flex-shrink:0; }
+.wmrow .info { flex:1; color:#4a5568; }
+.sugbox { background:#ebf8ff; border-radius:10px; padding:8px 12px; margin-top:8px; font-size:12.5px; color:#2d3748; line-height:1.9; }
+.sugbox b { color:#2b6cb0; }
+footer { text-align:center; font-size:12px; color:#a0aec0; padding:14px 0 4px; }
+@media (max-width:460px){ .row .date{width:72px} h1{font-size:18px} .stat .num{font-size:17px} }
+</style>
+</head>
+<body>
+
+<h1>📅 公考打卡计划</h1>
+<div class="sub">2026 国考 · 12月6日笔试 · 三阶段战略</div>
+
+<div class="stats">
+  <div class="stat"><div class="num" id="st-days">–</div><div class="lbl">距考试(天)</div></div>
+  <div class="stat"><div class="num" id="st-total">0</div><div class="lbl">累计打卡</div></div>
+  <div class="stat"><div class="num" id="st-streak">0</div><div class="lbl">连续天数 🔥</div></div>
+  <div class="stat"><div class="num" id="st-week">0/7</div><div class="lbl">本周完成</div></div>
+</div>
+
+<div class="stage" id="stage"></div>
+<div class="mile" id="mile"></div>
+
+<div class="weeknav">
+  <button id="prev" onclick="move(-1)">‹</button>
+  <span id="weektitle"></span>
+  <button id="next" onclick="move(1)">›</button>
+</div>
+
+<div id="list"></div>
+
+<div class="card">
+  <div class="cardtitle">📝 练后小记<span class="tag2">练完顺手填 · 只看两个数</span></div>
+  <div id="noteForm" class="noteform"><span id="noteDay"></span>错 <input class="inp" id="in-wrong" type="number" min="0" inputmode="numeric" placeholder="几题"> 题 · 用 <input class="inp" id="in-min" type="number" min="0" inputmode="numeric" placeholder="几分"> 分钟<button class="savebtn" onclick="saveNote()">保存</button></div>
+  <div id="noteSaved" class="saved"></div>
+</div>
+
+<div class="card">
+  <div class="cardtitle">📈 模块进步记录<span class="tag2">错题更少 · 用时更快 = 进步</span></div>
+  <div id="trends"></div>
+</div>
+
+<div class="card">
+  <div class="cardtitle">🗺️ 每周弱点地图<span class="tag2">一周看一次 · 调整下周方向</span></div>
+  <div id="weakmap"></div>
+</div>
+
+<div class="card">
+  <div class="cardtitle">✍️ 复盘记录<span class="tag2">贴题 → 填卡 → 每周翻一遍</span></div>
+  <details>
+    <summary>📖 先看:复盘三步</summary>
+    <div class="steps">
+      <b>① 重做一遍</b>:先别看答案,自己再想一次;重做就会的 = 状态错,放过。<br>
+      <b>② 找"卡住的点"</b>:看答案后问一句——公式没记住?题没读懂?还是方法用错?<br>
+      <b>③ 写一句提醒</b>:「模块·题型 = 下次看到____就想到____」一句话就够。<br>
+      <span style="color:#a0aec0">每题 ≤5 分钟 · 蒙对(⭕)的题也要看 · 错题是情报,不是审判 💪</span>
+    </div>
+  </details>
+  <div class="lbl">📋 题目 / 出处</div>
+  <textarea class="ta" id="rev-q" placeholder="把题目文字粘进来,或写个来源,如:粉笔题库 · 资料第 3 题"></textarea>
+  <div class="lbl">🏷️ 错因类型(选一个)</div>
+  <div class="chiprow" id="revtype">
+    <span class="typchip" data-k="1" onclick="setType('1')">👀 看错/粗心</span>
+    <span class="typchip" data-k="2" onclick="setType('2')">📚 方法不会</span>
+    <span class="typchip" data-k="3" onclick="setType('3')">🪤 掉坑陷阱</span>
+    <span class="typchip" data-k="4" onclick="setType('4')">⏰ 时间不够</span>
+    <span class="typchip" data-k="5" onclick="setType('5')">🤔 题没读懂</span>
+    <span class="typchip" data-k="6" onclick="setType('6')">📖 积累不足</span>
+  </div>
+  <div class="lbl">✍️ 复盘内容(卡在哪 + 下次提醒)</div>
+  <textarea class="ta" id="rev-note" placeholder="① 卡在哪:……&#10;② 下次提醒:下次看到____就想到____"></textarea>
+  <div style="margin-top:8px"><button class="savebtn" onclick="saveReview()">保存这张错题卡</button></div>
+  <div class="lbl" style="margin-top:12px">🔍 按类型看:</div>
+  <div class="chiprow" id="revfilter">
+    <span class="fchip on" data-k="all" onclick="setFilter('all')">全部</span>
+    <span class="fchip" data-k="1" onclick="setFilter('1')">👀 看错</span>
+    <span class="fchip" data-k="2" onclick="setFilter('2')">📚 方法</span>
+    <span class="fchip" data-k="3" onclick="setFilter('3')">🪤 掉坑</span>
+    <span class="fchip" data-k="4" onclick="setFilter('4')">⏰ 时间</span>
+    <span class="fchip" data-k="5" onclick="setFilter('5')">🤔 没读懂</span>
+    <span class="fchip" data-k="6" onclick="setFilter('6')">📖 积累</span>
+    <span class="fchip" data-k="none" onclick="setFilter('none')">未分类</span>
+  </div>
+  <div id="revlist" style="margin-top:6px"></div>
+</div>
+
+<footer>数据只保存在本浏览器里 · 弹性日不打卡也算休息好 💪</footer>
+
+<script>
+/* ── 基本设定 ─────────────────────────────── */
+const START  = new Date(2026, 7, 24);   // 2026-08-24 周一（周的锚点）
+const ACTIVE = new Date(2026, 7, 25);   // 2026-08-25 周二 · 打卡从这天开始
+const EXAM   = new Date(2026, 11, 6);   // 2026-12-06 考试日
+const WEEKS  = 15;
+const DAYMS  = 86400000;
+const weekdays = ['周一','周二','周三','周四','周五','周六','周日'];
+
+/* ── 三阶段（按当前日期显示）────────────────── */
+function stageFor(d){
+  if (d <= new Date(2026, 9, 26)) return { name:'第一阶段 · 模块重建', range:'8.25 - 10.26', desc:'资料 → 言语 → 判断 逐个攻破' };
+  if (d <= new Date(2026, 10, 30)) return { name:'第二阶段 · 申论 + 混合', range:'10.27 - 11.30', desc:'行测保温 + 申论系统搭建' };
+  return { name:'第三阶段 · 全真冲刺', range:'12.1 - 12.5', desc:'全真模考 + 错题复盘 + 考前调整' };
+}
+
+/* ── 每日任务表（按用户三阶段计划）────────────── */
+function T(mod, desc, tip){ return { mod:mod, desc:desc, tip:tip||'' }; }
+
+function taskForDate(d){
+  const k = dateKey(d);
+  const wd = d.getDay();
+
+  if (d < ACTIVE) return T('📌 准备日', '明天正式开始打卡', '');
+
+  /* —— 第一阶段 · 周六回血日（轻量可选，累了就纯休息）—— */
+  if (k >= '2026-08-25' && k <= '2026-10-26' && wd === 6) return T('🧘 回血日', '下午 1 小时轻量可选', '错题回顾 / 时政常识 10 题 / 申论素材 2 篇 · 累了就纯休息');
+
+  /* —— 第一阶段 · 资料专项（8.25 - 9.13）—— */
+  if (k >= '2026-08-25' && k <= '2026-09-13'){
+    const m = {
+      '2026-08-25': T('📊 资料专项', '资料 4 篇 · 限时 30 分钟（缓冲期）', '做完对答案复盘 · 先让自己坐下来'),
+      '2026-08-27': T('📊 资料专项', '资料 4 篇 · 限时 28 分钟', '复盘 · 今天缩 2 分钟'),
+      '2026-08-30': T('📊 资料专项', '资料 4 篇 · 限时 25 分钟（正式标准）', '上午场:限时 + 复盘 / 下午场:错题清扫或轻刷 · 晚上休息'),
+      '2026-09-01': T('📊 资料专项', '资料 4 篇 · 限时 25 分钟', '开始计时常态化'),
+      '2026-09-03': T('📊 资料专项', '资料 4 篇 · 限时 25 分钟', '记录正确率是否稳定'),
+      '2026-09-06': T('🏆 粉笔模考', '粉笔行测模考（只做行测）', '上午 9-11 模考 → 下午 复盘 + 资料错题清扫 · 分数不重要，练节奏'),
+      '2026-09-08': T('📊 资料专项', '资料 4 篇 · 限时 25 分钟（保温）', '资料降为每周 2 次'),
+      '2026-09-11': T('📊 资料专项', '资料 4 篇 · 限时 25 分钟（保温）', '本周最后一次资料专项'),
+      '2026-09-13': T('🏆 粉笔模考', '粉笔行测模考', '上午 9-11 模考 → 下午 复盘 + 资料错题二刷 · 验收：25 分钟错 ≤3 题'),
+    };
+    if (m[k]) return m[k];
+  }
+
+  /* —— 第一阶段 · 言语专项（9.14 - 9.27）—— */
+  if (k >= '2026-09-14' && k <= '2026-09-27'){
+    const m = {
+      '2026-09-15': T('🗣️ 言语专项', '言语 40 题 · 限时 30 分钟（缓冲）', '重点看陌生词和主题词'),
+      '2026-09-17': T('🗣️ 言语专项', '言语 40 题 · 限时 25 分钟（正式标准）', '缩到标准时间'),
+      '2026-09-20': T('🏆 粉笔模考', '粉笔行测模考', '上午 9-11 模考 → 下午 复盘 + 言语错题清扫 · 看言语正确率'),
+      '2026-09-22': T('🗣️ 言语专项', '言语 40 题 · 限时 25 分钟', '巩固手感'),
+      '2026-09-24': T('🗣️ 言语专项', '言语 40 题 · 限时 25 分钟', '目标正确率 ≥70%'),
+      '2026-09-27': T('🏆 粉笔模考', '粉笔行测模考', '上午 9-11 模考 → 下午 复盘 + 言语错题清扫 · 言语专项收官'),
+    };
+    if (m[k]) return m[k];
+  }
+
+  /* —— 第一阶段 · 判断专项（9.28 - 10.26）—— */
+  if (k >= '2026-09-28' && k <= '2026-10-26'){
+    const m = {
+      '2026-09-30': T('🧠 判断专项', '判断 40 题 · 限时 35 分钟（缓冲）', '重点看图推和逻辑'),
+      '2026-10-04': T('🧠 判断专项', '判断 40 题 · 限时 30 分钟（正式）', '上午场:限时 + 复盘 / 下午场:错题分类或加练 · 国庆别偷懒'),
+      '2026-10-07': T('🧠 判断专项', '判断 40 题 · 限时 30 分钟', '巩固 · 国庆假期别偷懒'),
+      '2026-10-11': T('🏆 粉笔模考', '粉笔行测模考', '上午 9-11 模考 → 下午 复盘 + 判断错题分类（一笔画/对称/拆桥…）· 第一次真实检验'),
+      '2026-10-14': T('🧠 判断专项', '判断 40 题 · 限时 30 分钟', '第三次专项'),
+      '2026-10-18': T('🏆 粉笔模考', '粉笔行测模考', '上午 9-11 模考 → 下午 复盘 + 判断错题二刷 · 检验进步'),
+      '2026-10-21': T('🧠 判断专项', '判断 40 题 · 限时 30 分钟（保温）', '降为每周 1 次'),
+      '2026-10-26': T('🧩 混合卷', '行测三大模块混合卷', '资料+言语+判断 各一组 · 第一次综合实战'),
+    };
+    if (m[k]) return m[k];
+  }
+
+  /* —— 第二阶段 · 申论 + 行测保温（10.27 - 11.16）—— */
+  if (k >= '2026-10-27' && k <= '2026-11-16'){
+    if (wd === 0) return T('📝 申论主日', '上午:申论小题 1 道 · 限时 30 分钟 + 红笔对照', '下午:大作文骨架或错题复盘 · 晚上休息 · 申论是提分大头');
+    if (wd === 3) return T('📝 申论小题', '1 道小题（概括/对策）· 限时 30 分钟', '写完红笔对照，找关键词差距');
+    if (wd === 5) return T('📝 申论', '1 道小题 + 大作文骨架', '只写标题+总论点+3 个分论点');
+    if (wd === 2) return T('📊 行测保温', '资料一组 · 保持手感', '按顺序交替：本周资料');
+    if (wd === 4) return T('🗣️ 行测保温', '言语一组 · 保持手感', '按顺序交替：本周言语');
+    if (wd === 6) return T('🧠 行测保温', '判断一组 · 保持手感（弹性）', '加班太累可跳过，不算缺勤');
+  }
+
+  /* —— 第二阶段 · 整卷期（11.17 - 11.30）—— */
+  if (k >= '2026-11-17' && k <= '2026-11-30'){
+    if (k === '2026-11-29') return T('🏆 全真双科日', '上午 9-11:行测整卷 120 分钟 · 下午 2-5:申论整卷 150 分钟', '严格计时 · 模拟 12.6 真实考试节奏 · 考完早睡');
+    if (wd === 2 || wd === 4) return T('📝 行测整卷', '近 3 年国考真题 · 限时 120 分钟', '模拟涂卡，严格计时');
+    if (wd === 3 || wd === 5) return T('📄 申论整卷', '近 3 年国考真题 · 大作文写满格子', '完整 150 分钟，一气呵成');
+    if (wd === 6) return T('🧹 弹性复盘', '本周错题清扫（弹性）', '加班太累就休息');
+  }
+
+  /* —— 第三阶段 · 全真冲刺（12.1 - 12.5）—— */
+  if (k >= '2026-12-01' && k <= '2026-12-05'){
+    const m = {
+      '2026-12-01': T('📝 行测整卷', '近 2 年国考真题 · 严格 120 分钟', '模拟真实考场 · 用答题卡涂'),
+      '2026-12-02': T('📄 申论整卷', '近 2 年国考真题 · 严格 150 分钟', '大作文必须写满'),
+      '2026-12-03': T('📖 错题通读', '行测错题本通读一遍', '只看痛点总结 · 不刷题'),
+      '2026-12-04': T('📖 答案通读', '申论真题答案红笔划痕通读', '只看关键词在哪 · 不写'),
+      '2026-12-05': T('🧘 全天休息', '出门散步 · 晚餐清淡 · 23:00 前睡', '绝不碰书 · 不刷题 · 不焦虑'),
+    };
+    if (m[k]) return m[k];
+  }
+
+  /* —— 考试日 12.6 —— */
+  if (k === '2026-12-06') return T('🎯 考试日', '进考场 · 你准备好了', '按平常心答完每一题');
+
+  /* —— 其他：弹性日 —— */
+  return T('🧘 弹性日', '有余力可加练', '15 分钟错题回顾 / 10 题轻刷 · 累了就纯休息');
+}
+
+/* ── 打卡数据 ─────────────────────────────── */
+const KEY = 'guokao-plan-2026';
+let done = {};
+try { done = JSON.parse(localStorage.getItem(KEY) || '{}'); } catch(e) {}
+function save(){ localStorage.setItem(KEY, JSON.stringify(done)); }
+function dateKey(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function day0(d){ const x = new Date(d); x.setHours(0,0,0,0); return x; }
+function fmt(d){ return (d.getMonth()+1)+'月'+d.getDate()+'日'; }
+
+/* ── 练后小记数据（独立存储）────────────────── */
+const PKEY = 'guokao-plan-progress-2026';
+let prog = {};
+try { prog = JSON.parse(localStorage.getItem(PKEY) || '{}'); } catch(e) {}
+function saveProg(){ localStorage.setItem(PKEY, JSON.stringify(prog)); }
+function groupOf(mod){
+  if (mod.indexOf('模考')>=0 || mod.indexOf('全真')>=0) return '模考';
+  if (mod.indexOf('资料')>=0) return '资料';
+  if (mod.indexOf('言语')>=0) return '言语';
+  if (mod.indexOf('判断')>=0) return '判断';
+  if (mod.indexOf('申论')>=0) return '申论';
+  if (mod.indexOf('行测')>=0) return '行测';
+  return '其他';
+}
+function cmpChip(a, b, unit){
+  if (a == null) return '';
+  if (b < a) return '<span class="chip good">↓ 少 '+(a-b)+' '+unit+'</span>';
+  if (b > a) return '<span class="chip bad">↑ 多 '+(b-a)+' '+unit+'</span>';
+  return '<span class="chip flat">= 持平</span>';
+}
+function prevRecord(g, beforeKey){
+  let best = null, bestK = null;
+  for (const k in prog){
+    if (prog[k].g === g && k < beforeKey && (!bestK || k > bestK)){ best = prog[k]; bestK = k; }
+  }
+  return best ? { r: best, k: bestK } : null;
+}
+
+/* ── 复盘记录数据（独立存储）────────────────── */
+const RKEY = 'guokao-plan-reviews-2026';
+let revs = [];
+let curRevType = '';
+let revFilter = 'all';
+const REV_TYPES = {
+  '1': { e:'👀', n:'看错/粗心' }, '2': { e:'📚', n:'方法不会' }, '3': { e:'🪤', n:'掉坑陷阱' },
+  '4': { e:'⏰', n:'时间不够' }, '5': { e:'🤔', n:'题没读懂' }, '6': { e:'📖', n:'积累不足' }
+};
+try { revs = JSON.parse(localStorage.getItem(RKEY) || '[]'); } catch(e) {}
+function saveRevs(){ localStorage.setItem(RKEY, JSON.stringify(revs)); }
+function esc(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+const now = day0(new Date());
+const curWeek = Math.min(WEEKS-1, Math.max(0, Math.floor((now-START)/DAYMS/7)));
+let viewWeek = curWeek;
+
+function weekStart(w){ return new Date(START.getTime() + w*7*DAYMS); }
+
+/* ── 统计 ────────────────────────────────── */
+function computeStats(){
+  const daysToExam = Math.max(0, Math.ceil((day0(EXAM)-now)/DAYMS));
+  let total = 0, streak = 0;
+  for (const k in done) if (done[k]) total++;
+  for (let i=0;i<1000;i++){
+    const d = new Date(now.getTime()-i*DAYMS);
+    if (done[dateKey(d)]) streak++; else break;
+  }
+  const ws = weekStart(curWeek);
+  let weekDone = 0, weekTotal = 0;
+  for (let i=0;i<7;i++){
+    const dd = new Date(ws.getTime()+i*DAYMS);
+    if (dd < ACTIVE) continue;
+    weekTotal++;
+    if (done[dateKey(dd)]) weekDone++;
+  }
+  return { daysToExam, total, streak, weekDone, weekTotal };
+}
+
+function milestoneText(total){
+  const m = {
+    1:'第 1 天！开始了就是最棒的一步 🎉',
+    3:'第 3 天，习惯正在发芽 🌱',
+    7:'第一周完成！你已经超过了大多数中途放弃的人 💪',
+    14:'坚持两周！身体开始适应这个节奏了',
+    21:'21 天，习惯基本养成 🎯',
+    30:'30 天！稳住，胜利属于坚持的人 🏆',
+    45:'45 天，量变正在积累 📈',
+    60:'60 天！备考路已走完一半 ⚡',
+  };
+  if (m[total]) return m[total];
+  if (total>0 && total%7===0) return '连续 '+total+' 天打卡，太稳了！';
+  return '';
+}
+
+/* ── 渲染 ────────────────────────────────── */
+function render(){
+  const s = computeStats();
+  document.getElementById('st-days').textContent  = s.daysToExam;
+  document.getElementById('st-total').textContent = s.total;
+  document.getElementById('st-streak').textContent = s.streak;
+  document.getElementById('st-week').textContent  = s.weekDone+'/'+s.weekTotal;
+  document.getElementById('mile').textContent    = milestoneText(s.total);
+
+  const st = stageFor(now);
+  const ws = weekStart(viewWeek);
+  const we = new Date(ws.getTime()+6*DAYMS);
+  document.getElementById('weektitle').textContent = '第'+(viewWeek+1)+'周 · '+fmt(ws)+' ~ '+fmt(we);
+  document.getElementById('stage').innerHTML =
+    '<div><b>'+st.name+'</b> · '+st.range+'</div><div class="tag">'+st.desc+'</div>';
+
+  document.getElementById('prev').disabled = viewWeek===0;
+  document.getElementById('next').disabled = viewWeek>=WEEKS-1;
+
+  let html = '';
+  for (let i=0;i<7;i++){
+    const d = new Date(ws.getTime()+i*DAYMS);
+    const k = dateKey(d);
+    const isPrep = d < ACTIVE;
+    const t = isPrep ? T('📌 准备日', '明天正式开始打卡') : taskForDate(d);
+    const isFree = !isPrep && t.mod === '🧘 弹性日';
+    const isExam = !isPrep && k === '2026-12-06';
+    const isToday = +d === +now;
+    const isFuture = d > now;
+    const isDone = !isPrep && !!done[k];
+    const taskText = t.tip
+      ? '<span class="mod">'+t.mod+'</span> '+t.desc+'<span class="tip">'+t.tip+'</span>'
+      : '<span class="mod">'+t.mod+'</span> '+t.desc;
+    html += '<div class="row '+(isPrep?'prep':'')+(isDone?'done':'')+(isToday?' today':'')+(isFree?' free':'')+(isExam?' exam':'')+'">'
+          + '<div class="date">'+weekdays[i]+'<b>'+fmt(d)+'</b>'+(isToday?'<b style="color:#2b6cb0">今天</b>':'')+'</div>'
+          + '<div class="task">'+taskText+'</div>'
+          + '<button class="btn" '+(isFuture||isPrep?'disabled':'')+' onclick="toggle(\''+k+'\')">✓</button>'
+          + '</div>';
+  }
+  document.getElementById('list').innerHTML = html;
+}
+
+function toggle(k){
+  done[k] = !done[k];
+  save();
+  render();
+}
+
+function move(delta){
+  viewWeek = Math.min(WEEKS-1, Math.max(0, viewWeek+delta));
+  render();
+}
+
+/* ── 练后小记 + 进步记录渲染 ───────────────── */
+function saveNote(){
+  const w = document.getElementById('in-wrong').value;
+  const m = document.getElementById('in-min').value;
+  if (w === '' && m === ''){ alert('先填一个数吧：错了几题，或者用了几分钟'); return; }
+  const t = taskForDate(now);
+  prog[dateKey(now)] = { g: groupOf(t.mod), wrong: w===''?null:+w, minutes: m===''?null:+m };
+  saveProg();
+  renderNote();
+  renderTrends();
+  renderWeakMap();
+}
+function editNote(){
+  const rec = prog[dateKey(now)];
+  if (rec){
+    document.getElementById('in-wrong').value = rec.wrong==null?'':rec.wrong;
+    document.getElementById('in-min').value  = rec.minutes==null?'':rec.minutes;
+  }
+  document.getElementById('noteForm').style.display = '';
+  document.getElementById('noteSaved').innerHTML = '';
+}
+function renderNote(){
+  const k = dateKey(now);
+  const rec = prog[k];
+  const form = document.getElementById('noteForm');
+  const box  = document.getElementById('noteSaved');
+  document.getElementById('noteDay').textContent = '今天 '+fmt(now)+'：';
+  if (!rec){ form.style.display=''; box.innerHTML=''; return; }
+  form.style.display = 'none';
+  const g = rec.g;
+  let html = '已保存 ✅ '+fmt(now)+'：错 '+(rec.wrong==null?'–':rec.wrong)+' 题 · '+(rec.minutes==null?'–':rec.minutes)+' 分钟';
+  const prev = prevRecord(g, k);
+  if (prev){
+    const p = prev.r;
+    html += '<div class="cmp">上次 '+g+'（'+fmt(new Date(prev.k+'T00:00:00'))+'）：错 '+(p.wrong==null?'–':p.wrong)+' 题 · '+(p.minutes==null?'–':p.minutes)+' 分钟'
+          + cmpChip(p.wrong, rec.wrong, '题') + cmpChip(p.minutes, rec.minutes, '分钟')
+          + ' <a href="javascript:void(0)" onclick="editNote()">改一下</a></div>';
+  } else {
+    html += '<div class="cmp">第一次记录 '+g+'，下次再练同一个模块就能对比啦</div>';
+  }
+  box.innerHTML = html;
+}
+function renderTrends(){
+  const box = document.getElementById('trends');
+  const keys = Object.keys(prog).sort();
+  if (!keys.length){ box.innerHTML = '<div class="empty">还没有记录 · 今天练完，在上面填一下错题数和用时吧 😊</div>'; return; }
+  const groups = {};
+  for (const k of keys){ const r = prog[k]; (groups[r.g]=groups[r.g]||[]).push({k:k, r:r}); }
+  const fv = (r) => '错 '+(r.wrong==null?'–':r.wrong)+' 题 · '+(r.minutes==null?'–':r.minutes)+' 分';
+  let html = '';
+  for (const g of ['资料','言语','判断','申论','模考','行测','其他']){
+    const list = groups[g];
+    if (!list) continue;
+    const first = list[0], last = list[list.length-1];
+    html += '<div class="tgroup">'+g+' <span class="tag2">共 '+list.length+' 次 · 首次 '+fv(first.r)+' → 最新 '+fv(last.r)+'</span></div>';
+    for (let i=0;i<list.length;i++){
+      const item = list[i];
+      const prev = i>0 ? list[i-1] : null;
+      html += '<div class="trow"><span class="d">'+fmt(new Date(item.k+'T00:00:00'))+'</span>'
+            + '<span class="nums">错 '+(item.r.wrong==null?'–':item.r.wrong)+' 题 · '+(item.r.minutes==null?'–':item.r.minutes)+' 分钟</span>'
+            + (prev ? cmpChip(prev.r.wrong, item.r.wrong, '题')+cmpChip(prev.r.minutes, item.r.minutes, '分钟') : '<span class="chip flat">首次</span>')
+            + '</div>';
+    }
+  }
+  html += '<div class="empty" style="margin-top:8px">提示：错题数 ↓、用时 ↓ = 进步；两个都卡住不动 = 该回看方法课了</div>';
+  box.innerHTML = html;
+}
+
+/* ── 复盘记录渲染 ─────────────────────────── */
+function setType(k){
+  curRevType = (curRevType === k) ? '' : k;
+  document.querySelectorAll('#revtype .typchip').forEach(function(el){ el.classList.toggle('on', el.dataset.k === curRevType); });
+}
+function setFilter(k){
+  revFilter = k;
+  document.querySelectorAll('#revfilter .fchip').forEach(function(el){ el.classList.toggle('on', el.dataset.k === k); });
+  renderReviews();
+}
+function typeInfo(k){ const t = REV_TYPES[k]; return t ? t.e+' '+t.n : ''; }
+function saveReview(){
+  const q = document.getElementById('rev-q').value.trim();
+  const n = document.getElementById('rev-note').value.trim();
+  if (!q && !n){ alert('先写点东西吧:贴题目,或者写复盘内容'); return; }
+  revs.push({ id: Date.now().toString(36)+Math.floor(Math.random()*999), d: dateKey(now), t: curRevType, q: q, n: n });
+  saveRevs();
+  document.getElementById('rev-q').value = '';
+  document.getElementById('rev-note').value = '';
+  setType('');
+  renderReviews();
+  renderWeakMap();
+}
+function delReview(id){
+  if (!confirm('删掉这张错题卡?')) return;
+  revs = revs.filter(r => r.id !== id);
+  saveRevs();
+  renderReviews();
+}
+function renderReviews(){
+  const box = document.getElementById('revlist');
+  if (!revs.length){ box.innerHTML = '<div class="empty">还没有错题卡 · 练完按上面的三步,贴题、选类型、填卡、保存</div>'; return; }
+  let list = revs;
+  if (revFilter !== 'all') list = revs.filter(function(r){ return revFilter === 'none' ? !r.t : r.t === revFilter; });
+  if (!list.length){
+    box.innerHTML = '<div class="empty">这个类型还没有错题 · 好事,继续保持 🎉</div>';
+    return;
+  }
+  const nowK = dateKey(now);
+  let html = '';
+  for (let i=list.length-1;i>=0;i--){
+    const r = list[i];
+    const dd = new Date(r.d + 'T00:00:00');
+    html += '<div class="revitem">'
+          + '<div class="revmeta">'+fmt(dd)+(r.d===nowK?' · 今天':'')+(r.t ? ' <span class="typlbl">'+typeInfo(r.t)+'</span>' : '')+'<span class="delbtn" onclick="delReview(\''+r.id+'\')">✕ 删</span></div>'
+          + (r.q ? '<div class="revq">'+esc(r.q)+'</div>' : '')
+          + (r.n ? '<div class="revnote">'+esc(r.n)+'</div>' : '')
+          + '</div>';
+  }
+  box.innerHTML = html;
+}
+
+/* ── 每周弱点地图渲染 ─────────────────────── */
+function weekStats(ws, we){
+  const mods = {}, wrongs = {}, mins = {};
+  for (const k in prog){
+    const dd = new Date(k+'T00:00:00');
+    if (dd >= ws && dd < we){
+      const r = prog[k];
+      mods[r.g] = (mods[r.g]||0)+1;
+      if (r.wrong != null) wrongs[r.g] = (wrongs[r.g]||0)+r.wrong;
+      if (r.minutes != null) mins[r.g] = (mins[r.g]||0)+r.minutes;
+    }
+  }
+  let totalWrong = 0;
+  for (const k in wrongs) totalWrong += wrongs[k];
+  return { mods: mods, wrongs: wrongs, mins: mins, totalWrong: totalWrong };
+}
+function renderWeakMap(){
+  const box = document.getElementById('weakmap');
+  const ws = weekStart(viewWeek), we = new Date(ws.getTime()+7*DAYMS);
+  if (ws > now){ box.innerHTML = '<div class="empty">这周还没到,翻回本周看看 🗺️</div>'; return; }
+  const cur = weekStats(ws, we);
+  const prev = weekStats(new Date(ws.getTime()-7*DAYMS), ws);
+  const revsThis = revs.filter(r => { const dd = new Date(r.d+'T00:00:00'); return dd >= ws && dd < we; });
+  const isCur = viewWeek === curWeek;
+
+  let html = '<div class="wmline"><b>第 '+(viewWeek+1)+' 周</b> · '+fmt(ws)+' ~ '+fmt(new Date(we.getTime()-DAYMS))+(isCur?' · 本周':'')+'</div>';
+
+  const hasSess = Object.keys(cur.mods).length > 0;
+  if (!hasSess && !revsThis.length){
+    html += '<div class="empty">这一周还没有记录 · 练完一次,这里就会长出你的弱点地图</div>';
+    box.innerHTML = html; return;
+  }
+
+  let sumSess = 0;
+  for (const k in cur.mods) sumSess += cur.mods[k];
+
+  let overview = '📝 ';
+  if (sumSess) overview += '本周练习 <b>'+sumSess+'</b> 次 · 共错 <b>'+cur.totalWrong+'</b> 题 · ';
+  overview += '错题卡 <b>'+revsThis.length+'</b> 张';
+  if (sumSess && cur.totalWrong>0 && prev.totalWrong>0){
+    if (cur.totalWrong < prev.totalWrong) overview += ' · 📉 比上周少 '+(prev.totalWrong-cur.totalWrong)+' 题';
+    else if (cur.totalWrong > prev.totalWrong) overview += ' · 📈 比上周多 '+(cur.totalWrong-prev.totalWrong)+' 题';
+    else overview += ' · 错题数与上周持平';
+  }
+  html += '<div class="wmline">'+overview+'</div>';
+
+  const order = ['资料','言语','判断','申论','模考','行测','其他'];
+  if (sumSess){
+    html += '<div class="wmline" style="margin-top:6px"><b>按模块:</b></div>';
+    for (const g of order){
+      if (!cur.mods[g]) continue;
+      html += '<div class="wmrow"><span class="g">'+g+'</span><span class="info">练 '+cur.mods[g]+' 次'+(cur.wrongs[g]!=null?' · 共错 '+cur.wrongs[g]+' 题':'')+(cur.mins[g]!=null?' · 共用 '+cur.mins[g]+' 分钟':'')+'</span></div>';
+    }
+  }
+
+  const tCount = {};
+  let typed = 0, untyped = 0;
+  for (const r of revsThis){ if (r.t){ tCount[r.t]=(tCount[r.t]||0)+1; typed++; } else untyped++; }
+  if (revsThis.length){
+    html += '<div class="wmline" style="margin-top:6px"><b>按错因:</b></div>';
+    let chips = '';
+    for (const k of ['1','2','3','4','5','6']) if (tCount[k]) chips += '<span class="fchip" style="cursor:default">'+REV_TYPES[k].e+' '+REV_TYPES[k].n.split('/')[0]+' ×'+tCount[k]+'</span>';
+    if (untyped) chips += '<span class="fchip" style="cursor:default">未分类 ×'+untyped+'</span>';
+    html += '<div class="chiprow">'+chips+'</div>';
+  }
+
+  const sug = [];
+  if (typed >= 3){
+    let topK = null, topN = 0;
+    for (const k in tCount) if (tCount[k] > topN){ topN = tCount[k]; topK = k; }
+    const pct = Math.round(topN/typed*100);
+    if (topK === '1') sug.push('👀 看错占 '+pct+'% ——下周做题强迫自己划题干关键词(单位/年份/数字),对答案前先自查 30 秒');
+    else if (topK === '2') sug.push('📚 方法不会最多 ——下周先回看对应方法课再做题,别硬刷');
+    else if (topK === '3') sug.push('🪤 掉坑最多 ——你已经认识陷阱了,下周专门记"陷阱关键词",错题卡会越来越少');
+    else if (topK === '4') sug.push('⏰ 时间不够最多 ——继续限时,练"取舍":超 2 分钟没思路就蒙,不恋战');
+    else if (topK === '5') sug.push('🤔 题没读懂最多 ——下周做题先读两遍题,圈出关键词再动手');
+    else if (topK === '6') sug.push('📖 积累不足最多 ——通勤/午休碎片时间刷时政和成语,不占晚间精力');
+  }
+  if (revsThis.length && revsThis.length < 3) sug.push('错题卡还少,先攒 3 张,地图会更准');
+  if (!sug.length) sug.push('先按计划练,数据攒够后这里会给出下周方向');
+  html += '<div class="sugbox"><b>💡 下周方向:</b><br>'+sug.map(s=>'· '+s).join('<br>')+'</div>';
+
+  box.innerHTML = html;
+}
+
+render();
+renderNote();
+renderTrends();
+renderReviews();
+renderWeakMap();
+</script>
+</body>
+</html>
