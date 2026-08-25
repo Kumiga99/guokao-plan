@@ -353,7 +353,67 @@ const REV_TYPES = {
 try { revs = JSON.parse(localStorage.getItem(RKEY) || '[]'); } catch(e) {}
 function saveRevs(){
   try { localStorage.setItem(RKEY, JSON.stringify(revs)); }
-  catch(e){ alert('存不下了:截图太多或太大。建议删掉一些旧错题卡(卡片右上角 ✕ 删),或以后只贴文字'); }
+  catch(e){ alert('存不下了:记录太多,建议删掉一些旧错题卡(卡片右上角 ✕ 删)'); }
+}
+
+/* ── 图片大空间存储(IndexedDB,按硬盘算,基本用不完)─ */
+const IDB_NAME = 'guokao-plan-imgs';
+let idb = null;
+function openIdb(){
+  return new Promise(function(res, rej){
+    if (idb) return res(idb);
+    const req = indexedDB.open(IDB_NAME, 1);
+    req.onupgradeneeded = function(){ req.result.createObjectStore('imgs'); };
+    req.onsuccess = function(){ idb = req.result; res(idb); };
+    req.onerror = function(){ rej(req.error); };
+  });
+}
+function idbPut(key, url){
+  return openIdb().then(function(db){
+    return new Promise(function(res, rej){
+      const tx = db.transaction('imgs', 'readwrite');
+      tx.objectStore('imgs').put(url, key);
+      tx.oncomplete = res;
+      tx.onerror = function(){ rej(tx.error); };
+    });
+  });
+}
+function idbGet(key){
+  return openIdb().then(function(db){
+    return new Promise(function(res, rej){
+      const rq = db.transaction('imgs').objectStore('imgs').get(key);
+      rq.onsuccess = function(){ res(rq.result); };
+      rq.onerror = function(){ rej(rq.error); };
+    });
+  });
+}
+function idbDel(keys){
+  return openIdb().then(function(db){
+    return new Promise(function(res, rej){
+      const tx = db.transaction('imgs', 'readwrite');
+      const st = tx.objectStore('imgs');
+      keys.forEach(function(k){ st.delete(k); });
+      tx.oncomplete = res;
+      tx.onerror = function(){ rej(tx.error); };
+    });
+  });
+}
+function imgKey(rid, j){ return rid + ':' + j; }
+function isInline(url){ return typeof url === 'string' && url.indexOf('data:') === 0; }
+function migrateImgs(){
+  let changed = false;
+  const jobs = [];
+  for (let i=0;i<revs.length;i++){
+    const r = revs[i];
+    if (!r.imgs || !r.imgs.length) continue;
+    const keys = r.imgs.map(function(url, j){
+      if (isInline(url)){ const k = imgKey(r.id, j); jobs.push(idbPut(k, url)); return k; }
+      return url;
+    });
+    if (JSON.stringify(keys) !== JSON.stringify(r.imgs)){ r.imgs = keys; changed = true; }
+  }
+  if (changed) saveRevs();
+  return Promise.all(jobs).catch(function(){});
 }
 function esc(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
@@ -444,18 +504,16 @@ function render(){
 function renderSpace(){
   const el = document.getElementById('spacebar');
   if (!el) return;
-  let used = 0;
-  try {
-    for (let i=0;i<localStorage.length;i++){
-      const k = localStorage.key(i);
-      used += (localStorage.getItem(k)||'').length * 2;
-    }
-  } catch(e){}
-  const cap = 5 * 1024 * 1024;
-  const pct = Math.min(100, Math.round(used / cap * 100));
-  const mb = (used / 1048576).toFixed(2);
-  el.innerHTML = '<div class="spacebar"><i style="width:'+pct+'%"></i></div>'
-    + '<div class="spacelbl">已用 '+mb+' MB / 约 5 MB('+pct+'%) · 大约还能存 '+Math.max(0, Math.floor((cap - used) / 200000))+' 张带图错题卡 · 满了会提示删旧卡</div>';
+  if (navigator.storage && navigator.storage.estimate){
+    navigator.storage.estimate().then(function(st){
+      const used = st.usage || 0, cap = st.quota || 0;
+      const pct = cap ? Math.min(100, Math.round(used/cap*100)) : 0;
+      el.innerHTML = '<div class="spacebar"><i style="width:'+pct+'%"></i></div>'
+        + '<div class="spacelbl">已用 '+((used/1048576).toFixed(1))+' MB / 可用约 '+((cap/1073741824).toFixed(1))+' GB('+pct+'%)· 截图已存入大空间,基本存不完</div>';
+    }).catch(function(){ el.innerHTML = ''; });
+  } else {
+    el.innerHTML = '';
+  }
 }
 
 function toggle(k){
@@ -599,22 +657,31 @@ function saveReview(){
   const q = document.getElementById('rev-q').value.trim();
   const n = document.getElementById('rev-note').value.trim();
   if (!q && !n && !curImgs.length){ alert('先写点东西吧:贴题目、写复盘,或加截图'); return; }
-  revs.push({ id: Date.now().toString(36)+Math.floor(Math.random()*999), d: dateKey(now), t: curRevType, q: q, n: n, imgs: curImgs.slice() });
-  saveRevs();
-  document.getElementById('rev-q').value = '';
-  document.getElementById('rev-note').value = '';
-  curImgs = [];
-  renderImgPreview();
-  setType('');
-  renderReviews();
-  renderWeakMap();
-  renderSpace();
+  const rid = Date.now().toString(36) + Math.floor(Math.random()*999);
+  const jobs = curImgs.map(function(url, j){ return idbPut(imgKey(rid, j), url); });
+  Promise.all(jobs).then(function(){
+    revs.push({ id: rid, d: dateKey(now), t: curRevType, q: q, n: n, imgs: curImgs.map(function(url, j){ return imgKey(rid, j); }) });
+    saveRevs();
+    document.getElementById('rev-q').value = '';
+    document.getElementById('rev-note').value = '';
+    curImgs = [];
+    renderImgPreview();
+    setType('');
+    renderReviews();
+    renderWeakMap();
+    renderSpace();
+  }).catch(function(){ alert('图片保存失败,请重试'); });
 }
 function delReview(id){
   if (!confirm('删掉这张错题卡?')) return;
-  revs = revs.filter(r => r.id !== id);
+  let imgs = [];
+  for (let i=0;i<revs.length;i++){ if (revs[i].id === id){ imgs = revs[i].imgs || []; break; } }
+  revs = revs.filter(function(r){ return r.id !== id; });
   saveRevs();
+  if (imgs.length) idbDel(imgs);
   renderReviews();
+  renderWeakMap();
+  renderSpace();
 }
 function renderReviews(){
   const box = document.getElementById('revlist');
@@ -630,14 +697,37 @@ function renderReviews(){
   for (let i=list.length-1;i>=0;i--){
     const r = list[i];
     const dd = new Date(r.d + 'T00:00:00');
-    html += '<div class="revitem">'
+    html += '<div class="revitem" id="rev-'+r.id+'">'
           + '<div class="revmeta">'+fmt(dd)+(r.d===nowK?' · 今天':'')+(r.t ? ' <span class="typlbl">'+typeInfo(r.t)+'</span>' : '')+'<span class="delbtn" onclick="delReview(\''+r.id+'\')">✕ 删</span></div>'
           + (r.q ? '<div class="revq">'+esc(r.q)+'</div>' : '')
           + (r.n ? '<div class="revnote">'+esc(r.n)+'</div>' : '')
-          + (r.imgs && r.imgs.length ? r.imgs.map(function(u){ return '<img src="'+u+'" class="revimg" onclick="this.classList.toggle(\'full\')">'; }).join('') : '')
           + '</div>';
   }
   box.innerHTML = html;
+  for (let i=list.length-1;i>=0;i--){
+    const r = list[i];
+    if (!r.imgs || !r.imgs.length) continue;
+    const el = document.getElementById('rev-'+r.id);
+    if (!el) continue;
+    r.imgs.forEach(function(url){
+      if (isInline(url)){
+        const img = document.createElement('img');
+        img.className = 'revimg';
+        img.src = url;
+        img.onclick = function(){ this.classList.toggle('full'); };
+        el.appendChild(img);
+      } else {
+        idbGet(url).then(function(u){
+          if (!u) return;
+          const img = document.createElement('img');
+          img.className = 'revimg';
+          img.src = u;
+          img.onclick = function(){ this.classList.toggle('full'); };
+          el.appendChild(img);
+        }).catch(function(){});
+      }
+    });
+  }
 }
 
 /* ── 每周弱点地图渲染 ─────────────────────── */
@@ -725,6 +815,7 @@ function renderWeakMap(){
   box.innerHTML = html;
 }
 
+migrateImgs();
 render();
 renderNote();
 renderTrends();
@@ -733,16 +824,24 @@ renderWeakMap();
 
 /* ── 数据备份 / 同步 ─────────────────────── */
 function exportData(){
-  const data = { v: 1, exported: dateKey(now), done: done, prog: prog, revs: revs };
-  const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = '打卡数据备份-'+dateKey(now)+'.json';
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(a.href);
-  alert('已导出备份文件 ✅ 传到另一个设备(微信文件传输/网盘都行),点"导入数据"就同步了');
+  const gather = revs.map(function(r){
+    if (!r.imgs || !r.imgs.length) return Promise.resolve(r);
+    return Promise.all(r.imgs.map(function(k){
+      return isInline(k) ? Promise.resolve(k) : idbGet(k).catch(function(){ return null; });
+    })).then(function(imgs){ const c = Object.assign({}, r, { imgs: imgs }); return c; });
+  });
+  Promise.all(gather).then(function(out){
+    const data = { v: 2, exported: dateKey(now), done: done, prog: prog, revs: out };
+    const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = '打卡数据备份-'+dateKey(now)+'.json';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(a.href);
+    alert('已导出备份文件 ✅ 传到另一个设备(微信文件传输/网盘都行),点"导入数据"就同步了');
+  });
 }
 function importData(ev){
   const f = ev.target.files && ev.target.files[0];
@@ -752,17 +851,32 @@ function importData(ev){
     try {
       const d = JSON.parse(reader.result);
       if (!d || typeof d !== 'object' || !('done' in d) || !('prog' in d) || !('revs' in d)) throw new Error('格式不对');
-      const ndone = {}, nprog = {}, nrevs = revs.slice(), seen = {};
-      for (const k in done) ndone[k] = done[k];
-      for (const k in d.done) ndone[k] = ndone[k] || d.done[k];
-      for (const k in prog) nprog[k] = prog[k];
-      for (const k in d.prog) nprog[k] = d.prog[k];
-      nrevs.forEach(r => { if (r && r.id) seen[r.id] = 1; });
-      (d.revs||[]).forEach(r => { if (r && r.id && !seen[r.id]){ nrevs.push(r); seen[r.id] = 1; } });
-      done = ndone; prog = nprog; revs = nrevs;
-      save(); saveProg(); saveRevs();
-      render(); renderNote(); renderTrends(); renderReviews(); renderWeakMap();
-      alert('导入成功 ✅ 两边记录已合并:打卡 '+Object.keys(done).length+' 天 · 错题卡 '+revs.length+' 张');
+      const seen = {};
+      revs.forEach(r => { if (r && r.id) seen[r.id] = 1; });
+      const jobs = [];
+      (d.revs||[]).forEach(r => {
+        if (r && r.id && !seen[r.id] && r.imgs && r.imgs.length){
+          const keys = [];
+          r.imgs.forEach(function(url, j){
+            if (isInline(url)){ const k = imgKey(r.id, j); keys.push(k); jobs.push(idbPut(k, url)); }
+            else keys.push(url);
+          });
+          r.imgs = keys;
+        }
+      });
+      Promise.all(jobs).then(function(){
+        const ndone = {}, nprog = {}, nrevs = revs.slice(), seen2 = {};
+        for (const k in done) ndone[k] = done[k];
+        for (const k in d.done) ndone[k] = ndone[k] || d.done[k];
+        for (const k in prog) nprog[k] = prog[k];
+        for (const k in d.prog) nprog[k] = d.prog[k];
+        nrevs.forEach(r => { if (r && r.id) seen2[r.id] = 1; });
+        (d.revs||[]).forEach(r => { if (r && r.id && !seen2[r.id]){ nrevs.push(r); seen2[r.id] = 1; } });
+        done = ndone; prog = nprog; revs = nrevs;
+        save(); saveProg(); saveRevs();
+        render(); renderNote(); renderTrends(); renderReviews(); renderWeakMap();
+        alert('导入成功 ✅ 两边记录已合并:打卡 '+Object.keys(done).length+' 天 · 错题卡 '+revs.length+' 张');
+      }).catch(function(){ alert('图片导入失败,请重试'); });
     } catch(e){
       alert('导入失败:文件格式不对,请选"导出数据"生成的备份文件');
     }
