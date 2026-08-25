@@ -82,6 +82,10 @@ details summary { cursor:pointer; font-size:13px; font-weight:700; color:#2b6cb0
 .wmrow .info { flex:1; color:#4a5568; }
 .sugbox { background:#ebf8ff; border-radius:10px; padding:8px 12px; margin-top:8px; font-size:12.5px; color:#2d3748; line-height:1.9; }
 .sugbox b { color:#2b6cb0; }
+.imgprev { display:flex; flex-wrap:wrap; gap:6px; margin-top:6px; }
+.thumb { height:64px; border-radius:8px; cursor:pointer; border:1px solid #e2e8f0; }
+.revimg { max-height:170px; max-width:100%; border-radius:8px; margin-top:6px; cursor:pointer; display:block; }
+.revimg.full { max-height:none; width:100%; }
 footer { text-align:center; font-size:12px; color:#a0aec0; padding:14px 0 4px; }
 @media (max-width:460px){ .row .date{width:72px} h1{font-size:18px} .stat .num{font-size:17px} }
 </style>
@@ -136,8 +140,14 @@ footer { text-align:center; font-size:12px; color:#a0aec0; padding:14px 0 4px; }
       <span style="color:#a0aec0">每题 ≤5 分钟 · 蒙对(⭕)的题也要看 · 错题是情报,不是审判 💪</span>
     </div>
   </details>
-  <div class="lbl">📋 题目 / 出处</div>
+  <div class="lbl">📋 题目 / 出处(文字或截图)</div>
   <textarea class="ta" id="rev-q" placeholder="把题目文字粘进来,或写个来源,如:粉笔题库 · 资料第 3 题"></textarea>
+  <div style="margin-top:6px">
+    <button class="savebtn" style="background:#718096" onclick="document.getElementById('rev-img').click()">🖼️ 加截图</button>
+    <span class="empty">也可以直接粘贴截图到上面的题目框</span>
+    <input type="file" id="rev-img" accept="image/*" style="display:none" onchange="addRevImage(event)">
+  </div>
+  <div id="rev-img-preview" class="imgprev"></div>
   <div class="lbl">🏷️ 错因类型(选一个)</div>
   <div class="chiprow" id="revtype">
     <span class="typchip" data-k="1" onclick="setType('1')">👀 看错/粗心</span>
@@ -328,12 +338,16 @@ const RKEY = 'guokao-plan-reviews-2026';
 let revs = [];
 let curRevType = '';
 let revFilter = 'all';
+let curImgs = [];
 const REV_TYPES = {
   '1': { e:'👀', n:'看错/粗心' }, '2': { e:'📚', n:'方法不会' }, '3': { e:'🪤', n:'掉坑陷阱' },
   '4': { e:'⏰', n:'时间不够' }, '5': { e:'🤔', n:'题没读懂' }, '6': { e:'📖', n:'积累不足' }
 };
 try { revs = JSON.parse(localStorage.getItem(RKEY) || '[]'); } catch(e) {}
-function saveRevs(){ localStorage.setItem(RKEY, JSON.stringify(revs)); }
+function saveRevs(){
+  try { localStorage.setItem(RKEY, JSON.stringify(revs)); }
+  catch(e){ alert('存不下了:截图太多或太大。建议删掉一些旧错题卡(卡片右上角 ✕ 删),或以后只贴文字'); }
+}
 function esc(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
 const now = day0(new Date());
@@ -510,14 +524,57 @@ function setFilter(k){
   renderReviews();
 }
 function typeInfo(k){ const t = REV_TYPES[k]; return t ? t.e+' '+t.n : ''; }
+function readRevImage(file, cb){
+  const rd = new FileReader();
+  rd.onload = function(){
+    const img = new Image();
+    img.onload = function(){ cb(compressRevImg(img)); };
+    img.src = rd.result;
+  };
+  rd.readAsDataURL(file);
+}
+function compressRevImg(img){
+  let w = img.width, h = img.height;
+  const MAX = 900;
+  if (Math.max(w, h) > MAX){ const s = MAX / Math.max(w, h); w = Math.round(w*s); h = Math.round(h*s); }
+  const c = document.createElement('canvas');
+  c.width = w; c.height = h;
+  c.getContext('2d').drawImage(img, 0, 0, w, h);
+  return c.toDataURL('image/jpeg', 0.72);
+}
+function addRevImage(ev){
+  const f = ev.target.files && ev.target.files[0];
+  ev.target.value = '';
+  if (!f) return;
+  readRevImage(f, function(url){ curImgs.push(url); renderImgPreview(); });
+}
+function renderImgPreview(){
+  document.getElementById('rev-img-preview').innerHTML =
+    curImgs.map(function(u, i){ return '<img src="'+u+'" class="thumb" onclick="previewRevImg('+i+')">'; }).join('');
+}
+function previewRevImg(i){ window.open(curImgs[i], '_blank'); }
+['rev-q','rev-note'].forEach(function(id){
+  document.getElementById(id).addEventListener('paste', function(e){
+    const items = (e.clipboardData || {}).items || [];
+    for (let i=0;i<items.length;i++){
+      if (items[i].type && items[i].type.indexOf('image/') === 0){
+        e.preventDefault();
+        readRevImage(items[i].getAsFile(), function(url){ curImgs.push(url); renderImgPreview(); });
+        return;
+      }
+    }
+  });
+});
 function saveReview(){
   const q = document.getElementById('rev-q').value.trim();
   const n = document.getElementById('rev-note').value.trim();
-  if (!q && !n){ alert('先写点东西吧:贴题目,或者写复盘内容'); return; }
-  revs.push({ id: Date.now().toString(36)+Math.floor(Math.random()*999), d: dateKey(now), t: curRevType, q: q, n: n });
+  if (!q && !n && !curImgs.length){ alert('先写点东西吧:贴题目、写复盘,或加截图'); return; }
+  revs.push({ id: Date.now().toString(36)+Math.floor(Math.random()*999), d: dateKey(now), t: curRevType, q: q, n: n, imgs: curImgs.slice() });
   saveRevs();
   document.getElementById('rev-q').value = '';
   document.getElementById('rev-note').value = '';
+  curImgs = [];
+  renderImgPreview();
   setType('');
   renderReviews();
   renderWeakMap();
@@ -546,6 +603,7 @@ function renderReviews(){
           + '<div class="revmeta">'+fmt(dd)+(r.d===nowK?' · 今天':'')+(r.t ? ' <span class="typlbl">'+typeInfo(r.t)+'</span>' : '')+'<span class="delbtn" onclick="delReview(\''+r.id+'\')">✕ 删</span></div>'
           + (r.q ? '<div class="revq">'+esc(r.q)+'</div>' : '')
           + (r.n ? '<div class="revnote">'+esc(r.n)+'</div>' : '')
+          + (r.imgs && r.imgs.length ? r.imgs.map(function(u){ return '<img src="'+u+'" class="revimg" onclick="this.classList.toggle(\'full\')">'; }).join('') : '')
           + '</div>';
   }
   box.innerHTML = html;
