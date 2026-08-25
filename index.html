@@ -89,6 +89,9 @@ details summary { cursor:pointer; font-size:13px; font-weight:700; color:#2b6cb0
 .thumb.full { height:auto; width:100%; }
 .revimg { max-height:170px; max-width:100%; border-radius:8px; margin-top:6px; cursor:pointer; display:block; }
 .revimg.full { max-height:none; width:100%; }
+.spacebar { background:#edf2f7; border-radius:8px; height:8px; overflow:hidden; }
+.spacebar i { display:block; height:100%; background:#2b6cb0; border-radius:8px; transition:width .3s; }
+.spacelbl { font-size:11px; color:#a0aec0; margin-top:4px; }
 footer { text-align:center; font-size:12px; color:#a0aec0; padding:14px 0 4px; }
 @media (max-width:460px){ .row .date{width:72px} h1{font-size:18px} .stat .num{font-size:17px} }
 </style>
@@ -185,6 +188,7 @@ footer { text-align:center; font-size:12px; color:#a0aec0; padding:14px 0 4px; }
     <button class="savebtn" style="background:#718096" onclick="document.getElementById('import-file').click()">📥 导入数据</button>
     <input type="file" id="import-file" accept=".json,application/json" style="display:none" onchange="importData(event)">
   </div>
+  <div id="spacebar" style="margin-top:8px"></div>
   <div class="empty" style="margin-top:6px">导出 = 下载一个备份文件;导入 = 把文件里的数据合并进当前设备(两边记录都会保留,不会互相覆盖)。</div>
 </div>
 
@@ -435,6 +439,23 @@ function render(){
           + '</div>';
   }
   document.getElementById('list').innerHTML = html;
+  renderSpace();
+}
+function renderSpace(){
+  const el = document.getElementById('spacebar');
+  if (!el) return;
+  let used = 0;
+  try {
+    for (let i=0;i<localStorage.length;i++){
+      const k = localStorage.key(i);
+      used += (localStorage.getItem(k)||'').length * 2;
+    }
+  } catch(e){}
+  const cap = 5 * 1024 * 1024;
+  const pct = Math.min(100, Math.round(used / cap * 100));
+  const mb = (used / 1048576).toFixed(2);
+  el.innerHTML = '<div class="spacebar"><i style="width:'+pct+'%"></i></div>'
+    + '<div class="spacelbl">已用 '+mb+' MB / 约 5 MB('+pct+'%) · 大约还能存 '+Math.max(0, Math.floor((cap - used) / 200000))+' 张带图错题卡 · 满了会提示删旧卡</div>';
 }
 
 function toggle(k){
@@ -459,6 +480,7 @@ function saveNote(){
   renderNote();
   renderTrends();
   renderWeakMap();
+  renderSpace();
 }
 function editNote(){
   const rec = prog[dateKey(now)];
@@ -586,6 +608,7 @@ function saveReview(){
   setType('');
   renderReviews();
   renderWeakMap();
+  renderSpace();
 }
 function delReview(id){
   if (!confirm('删掉这张错题卡?')) return;
