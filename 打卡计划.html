@@ -164,6 +164,17 @@ footer { text-align:center; font-size:12px; color:#a0aec0; padding:14px 0 4px; }
   <div id="revlist" style="margin-top:6px"></div>
 </div>
 
+<div class="card">
+  <div class="cardtitle">🔄 数据备份 / 同步<span class="tag2">换设备用 · 每周同步一次</span></div>
+  <div class="wmline">数据存在各设备的浏览器里,不会自动互通。在平板上做完题,把数据带回来:</div>
+  <div style="margin-top:6px">
+    <button class="savebtn" onclick="exportData()">📤 导出数据</button>
+    <button class="savebtn" style="background:#718096" onclick="document.getElementById('import-file').click()">📥 导入数据</button>
+    <input type="file" id="import-file" accept=".json,application/json" style="display:none" onchange="importData(event)">
+  </div>
+  <div class="empty" style="margin-top:6px">导出 = 下载一个备份文件;导入 = 把文件里的数据合并进当前设备(两边记录都会保留,不会互相覆盖)。</div>
+</div>
+
 <footer>数据只保存在本浏览器里 · 弹性日不打卡也算休息好 💪</footer>
 
 <script>
@@ -630,6 +641,46 @@ renderNote();
 renderTrends();
 renderReviews();
 renderWeakMap();
+
+/* ── 数据备份 / 同步 ─────────────────────── */
+function exportData(){
+  const data = { v: 1, exported: dateKey(now), done: done, prog: prog, revs: revs };
+  const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = '打卡数据备份-'+dateKey(now)+'.json';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(a.href);
+  alert('已导出备份文件 ✅ 传到另一个设备(微信文件传输/网盘都行),点"导入数据"就同步了');
+}
+function importData(ev){
+  const f = ev.target.files && ev.target.files[0];
+  if (!f) return;
+  const reader = new FileReader();
+  reader.onload = function(){
+    try {
+      const d = JSON.parse(reader.result);
+      if (!d || typeof d !== 'object' || !('done' in d) || !('prog' in d) || !('revs' in d)) throw new Error('格式不对');
+      const ndone = {}, nprog = {}, nrevs = revs.slice(), seen = {};
+      for (const k in done) ndone[k] = done[k];
+      for (const k in d.done) ndone[k] = ndone[k] || d.done[k];
+      for (const k in prog) nprog[k] = prog[k];
+      for (const k in d.prog) nprog[k] = d.prog[k];
+      nrevs.forEach(r => { if (r && r.id) seen[r.id] = 1; });
+      (d.revs||[]).forEach(r => { if (r && r.id && !seen[r.id]){ nrevs.push(r); seen[r.id] = 1; } });
+      done = ndone; prog = nprog; revs = nrevs;
+      save(); saveProg(); saveRevs();
+      render(); renderNote(); renderTrends(); renderReviews(); renderWeakMap();
+      alert('导入成功 ✅ 两边记录已合并:打卡 '+Object.keys(done).length+' 天 · 错题卡 '+revs.length+' 张');
+    } catch(e){
+      alert('导入失败:文件格式不对,请选"导出数据"生成的备份文件');
+    }
+  };
+  reader.readAsText(f);
+  ev.target.value = '';
+}
 </script>
 </body>
 </html>
