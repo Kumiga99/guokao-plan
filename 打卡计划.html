@@ -349,7 +349,7 @@ let revs = [];
 let curRevType = '';
 let revFilter = 'all';
 let curImgs = [];
-let revDate = dateKey(now);
+let revDate = '';
 const REV_TYPES = {
   '1': { e:'👀', n:'看错/粗心' }, '2': { e:'📚', n:'方法不会' }, '3': { e:'🪤', n:'掉坑陷阱' },
   '4': { e:'⏰', n:'时间不够' }, '5': { e:'🤔', n:'题没读懂' }, '6': { e:'📖', n:'积累不足' }
@@ -674,7 +674,7 @@ function saveReview(){
   const rid = Date.now().toString(36) + Math.floor(Math.random()*999);
   const jobs = curImgs.map(function(url, j){ return idbPut(imgKey(rid, j), url); });
   Promise.all(jobs).then(function(){
-    const d = document.getElementById('rev-date').value || revDate;
+    const d = document.getElementById('rev-date').value || dateKey(now);
     revs.push({ id: rid, d: d, t: curRevType, q: q, n: n, imgs: curImgs.map(function(url, j){ return imgKey(rid, j); }) });
     saveRevs();
     document.getElementById('rev-date').value = dateKey(now);
