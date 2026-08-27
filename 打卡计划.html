@@ -92,6 +92,7 @@ details summary { cursor:pointer; font-size:13px; font-weight:700; color:#2b6cb0
 .spacebar { background:#edf2f7; border-radius:8px; height:8px; overflow:hidden; }
 .spacebar i { display:block; height:100%; background:#2b6cb0; border-radius:8px; transition:width .3s; }
 .spacelbl { font-size:11px; color:#a0aec0; margin-top:4px; }
+.dateinp { border:1px solid #cbd5e0; border-radius:8px; padding:5px 6px; font-size:13px; color:#4a5568; background:#fff; }
 footer { text-align:center; font-size:12px; color:#a0aec0; padding:14px 0 4px; }
 @media (max-width:460px){ .row .date{width:72px} h1{font-size:18px} .stat .num{font-size:17px} }
 </style>
@@ -121,7 +122,7 @@ footer { text-align:center; font-size:12px; color:#a0aec0; padding:14px 0 4px; }
 
 <div class="card">
   <div class="cardtitle">📝 练后小记<span class="tag2">练完顺手填 · 只看两个数</span></div>
-  <div id="noteForm" class="noteform"><span id="noteDay"></span>错 <input class="inp" id="in-wrong" type="number" min="0" inputmode="numeric" placeholder="几题"> 题 · 用 <input class="inp" id="in-min" type="number" min="0" inputmode="numeric" placeholder="几分"> 分钟<button class="savebtn" onclick="saveNote()">保存</button></div>
+  <div id="noteForm" class="noteform"><input type="date" id="note-date" class="dateinp" onchange="noteDate=this.value;renderNote()"> · 错 <input class="inp" id="in-wrong" type="number" min="0" inputmode="numeric" placeholder="几题"> 题 · 用 <input class="inp" id="in-min" type="number" min="0" inputmode="numeric" placeholder="几分"> 分钟<button class="savebtn" onclick="saveNote()">保存</button></div>
   <div id="noteSaved" class="saved"></div>
 </div>
 
@@ -136,7 +137,7 @@ footer { text-align:center; font-size:12px; color:#a0aec0; padding:14px 0 4px; }
 </div>
 
 <div class="card">
-  <div class="cardtitle">✍️ 复盘记录<span class="tag2">贴题 → 填卡 → 每周翻一遍</span></div>
+  <div class="cardtitle">✍️ 复盘记录<span class="tag2">贴题 → 填卡 → 每周翻一遍 · 没空可补记</span></div>
   <details>
     <summary>📖 先看:复盘三步</summary>
     <div class="steps">
@@ -146,6 +147,8 @@ footer { text-align:center; font-size:12px; color:#a0aec0; padding:14px 0 4px; }
       <span style="color:#a0aec0">每题 ≤5 分钟 · 蒙对(⭕)的题也要看 · 错题是情报,不是审判 💪</span>
     </div>
   </details>
+  <div class="lbl">📅 日期(想补记哪天的就选哪天)</div>
+  <input type="date" id="rev-date" class="dateinp" style="width:100%">
   <div class="lbl">📋 题目 / 出处(文字或截图)</div>
   <textarea class="ta" id="rev-q" placeholder="把题目文字粘进来,或写个来源,如:粉笔题库 · 资料第 3 题"></textarea>
   <div style="margin-top:6px">
@@ -346,6 +349,7 @@ let revs = [];
 let curRevType = '';
 let revFilter = 'all';
 let curImgs = [];
+let revDate = dateKey(now);
 const REV_TYPES = {
   '1': { e:'👀', n:'看错/粗心' }, '2': { e:'📚', n:'方法不会' }, '3': { e:'🪤', n:'掉坑陷阱' },
   '4': { e:'⏰', n:'时间不够' }, '5': { e:'🤔', n:'题没读懂' }, '6': { e:'📖', n:'积累不足' }
@@ -528,12 +532,15 @@ function move(delta){
 }
 
 /* ── 练后小记 + 进步记录渲染 ───────────────── */
+let noteDate = dateKey(now);
 function saveNote(){
   const w = document.getElementById('in-wrong').value;
   const m = document.getElementById('in-min').value;
   if (w === '' && m === ''){ alert('先填一个数吧：错了几题，或者用了几分钟'); return; }
-  const t = taskForDate(now);
-  prog[dateKey(now)] = { g: groupOf(t.mod), wrong: w===''?null:+w, minutes: m===''?null:+m };
+  const k = document.getElementById('note-date').value || noteDate;
+  noteDate = k;
+  const t = taskForDate(new Date(k + 'T00:00:00'));
+  prog[k] = { g: groupOf(t.mod), wrong: w===''?null:+w, minutes: m===''?null:+m };
   saveProg();
   renderNote();
   renderTrends();
@@ -541,7 +548,9 @@ function saveNote(){
   renderSpace();
 }
 function editNote(){
-  const rec = prog[dateKey(now)];
+  const k = document.getElementById('note-date').value || noteDate;
+  noteDate = k;
+  const rec = prog[k];
   if (rec){
     document.getElementById('in-wrong').value = rec.wrong==null?'':rec.wrong;
     document.getElementById('in-min').value  = rec.minutes==null?'':rec.minutes;
@@ -550,15 +559,20 @@ function editNote(){
   document.getElementById('noteSaved').innerHTML = '';
 }
 function renderNote(){
-  const k = dateKey(now);
+  const inp = document.getElementById('note-date');
+  const k = inp.value || noteDate;
+  noteDate = k;
+  inp.value = k;
+  inp.max = dateKey(now);
+  inp.min = dateKey(ACTIVE);
   const rec = prog[k];
   const form = document.getElementById('noteForm');
   const box  = document.getElementById('noteSaved');
-  document.getElementById('noteDay').textContent = '今天 '+fmt(now)+'：';
+  const lbl = fmt(new Date(k + 'T00:00:00')) + (k === dateKey(now) ? '(今天)' : '');
   if (!rec){ form.style.display=''; box.innerHTML=''; return; }
   form.style.display = 'none';
   const g = rec.g;
-  let html = '已保存 ✅ '+fmt(now)+'：错 '+(rec.wrong==null?'–':rec.wrong)+' 题 · '+(rec.minutes==null?'–':rec.minutes)+' 分钟';
+  let html = '已保存 ✅ '+lbl+'：错 '+(rec.wrong==null?'–':rec.wrong)+' 题 · '+(rec.minutes==null?'–':rec.minutes)+' 分钟';
   const prev = prevRecord(g, k);
   if (prev){
     const p = prev.r;
@@ -660,8 +674,10 @@ function saveReview(){
   const rid = Date.now().toString(36) + Math.floor(Math.random()*999);
   const jobs = curImgs.map(function(url, j){ return idbPut(imgKey(rid, j), url); });
   Promise.all(jobs).then(function(){
-    revs.push({ id: rid, d: dateKey(now), t: curRevType, q: q, n: n, imgs: curImgs.map(function(url, j){ return imgKey(rid, j); }) });
+    const d = document.getElementById('rev-date').value || revDate;
+    revs.push({ id: rid, d: d, t: curRevType, q: q, n: n, imgs: curImgs.map(function(url, j){ return imgKey(rid, j); }) });
     saveRevs();
+    document.getElementById('rev-date').value = dateKey(now);
     document.getElementById('rev-q').value = '';
     document.getElementById('rev-note').value = '';
     curImgs = [];
@@ -816,6 +832,12 @@ function renderWeakMap(){
 }
 
 migrateImgs();
+(function(){
+  const rd = document.getElementById('rev-date');
+  if (rd){ rd.max = dateKey(now); rd.min = dateKey(ACTIVE); rd.value = dateKey(now); }
+  const nd = document.getElementById('note-date');
+  if (nd){ nd.max = dateKey(now); nd.min = dateKey(ACTIVE); nd.value = dateKey(now); }
+})();
 render();
 renderNote();
 renderTrends();
