@@ -47,6 +47,10 @@ h1 { font-size:21px; color:#1a202c; text-align:center; }
 .inp:focus { outline:2px solid #bee3f8; border-color:#2b6cb0; }
 .savebtn { background:#2b6cb0; color:#fff; border:none; border-radius:8px; padding:6px 14px; font-size:13px; cursor:pointer; margin-left:6px; }
 .savebtn:active { transform:scale(.96); }
+.actbtn { border:none; border-radius:6px; padding:3px 10px; font-size:12px; cursor:pointer; margin:6px 6px 0 0; }
+.actbtn.edit { background:#e2e8f0; color:#2b6cb0; }
+.actbtn.del { background:#fed7d7; color:#c53030; }
+.actbtn:active { transform:scale(.96); }
 .saved { font-size:13px; color:#48bb78; font-weight:600; margin-top:4px; }
 .cmp { font-size:12px; color:#718096; font-weight:400; margin-top:5px; line-height:1.6; }
 .good { color:#48bb78; } .bad { color:#e53e3e; } .flat { color:#a0aec0; }
@@ -558,6 +562,18 @@ function editNote(){
   document.getElementById('noteForm').style.display = '';
   document.getElementById('noteSaved').innerHTML = '';
 }
+function delNote(){
+  const k = document.getElementById('note-date').value || noteDate;
+  noteDate = k;
+  if (!prog[k]) return;
+  if (!confirm('删除 '+fmt(new Date(k+'T00:00:00'))+' 的练后小记？删除后可以重新填。')) return;
+  delete prog[k];
+  saveProg();
+  renderNote();
+  renderTrends();
+  renderWeakMap();
+  renderSpace();
+}
 function renderNote(){
   const inp = document.getElementById('note-date');
   const k = inp.value || noteDate;
@@ -577,11 +593,13 @@ function renderNote(){
   if (prev){
     const p = prev.r;
     html += '<div class="cmp">上次 '+g+'（'+fmt(new Date(prev.k+'T00:00:00'))+'）：错 '+(p.wrong==null?'–':p.wrong)+' 题 · '+(p.minutes==null?'–':p.minutes)+' 分钟'
-          + cmpChip(p.wrong, rec.wrong, '题') + cmpChip(p.minutes, rec.minutes, '分钟')
-          + ' <a href="javascript:void(0)" onclick="editNote()">改一下</a></div>';
+          + cmpChip(p.wrong, rec.wrong, '题') + cmpChip(p.minutes, rec.minutes, '分钟') + '</div>';
   } else {
     html += '<div class="cmp">第一次记录 '+g+'，下次再练同一个模块就能对比啦</div>';
   }
+  html += '<div><button class="actbtn edit" onclick="editNote()">✏️ 修改</button>'
+        + '<button class="actbtn del" onclick="delNote()">🗑️ 删除</button>'
+        + '<span class="empty">填错了就改，或删掉重填</span></div>';
   box.innerHTML = html;
 }
 function renderTrends(){
